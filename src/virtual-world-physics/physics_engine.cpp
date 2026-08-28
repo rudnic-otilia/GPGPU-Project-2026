@@ -150,6 +150,7 @@ CollisionInfo PhysicsEngine::ComputeBoxBoxCollision(size_t indexA, size_t indexB
 
 void PhysicsEngine::ResolveCollision(size_t indexA, size_t indexB,
     const CollisionInfo& collision) {
+    // TODO
     auto& objA = m_objects[indexA];
     auto& objB = m_objects[indexB];
 
@@ -157,11 +158,8 @@ void PhysicsEngine::ResolveCollision(size_t indexA, size_t indexB,
     float invMassB = (objB.isStatic || objB.mass <= 0.0f) ? 0.0f : (1.0f / objB.mass);
 
     float totalInvMass = invMassA + invMassB;
-    if (totalInvMass <= 0.0f) {
-        return;
-    }
+    if (totalInvMass <= 0.0f) return;
 
-    // 1. Separare pozițională imediată
     glm::vec3 correction = collision.normal * (collision.penetration / totalInvMass);
     objA.position -= correction * invMassA;
     objB.position += correction * invMassB;
@@ -169,19 +167,14 @@ void PhysicsEngine::ResolveCollision(size_t indexA, size_t indexB,
     objA.UpdateBoundingVolume();
     objB.UpdateBoundingVolume();
 
-    // 2. Viteza relativă
     glm::vec3 rv = objB.velocity - objA.velocity;
     float velAlongNormal = glm::dot(rv, collision.normal);
 
-    // Nu aplicăm impuls dacă deja se îndepărtează
-    if (velAlongNormal > 0.0f) {
-        return;
-    }
+    if (velAlongNormal > 0.0f) return;
 
     float e = std::min(objA.restitution, objB.restitution);
 
-    // Dacă viteza este foarte mică (repaus), setăm restituția la 0 ca să nu vibreze/sară la infinit
-    if (std::abs(velAlongNormal) < 0.1f) {
+    if (std::abs(velAlongNormal) < 0.05f) {
         e = 0.0f;
     }
 

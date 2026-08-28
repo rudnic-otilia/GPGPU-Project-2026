@@ -1,21 +1,18 @@
 cmake_minimum_required(VERSION 3.16)
 
-
 # Set root directory, if needed
 if (NOT GFXF_ROOT_DIR)
     set(GFXF_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR})
 endif()
 
-# TODO: Set your CUDA architecture here. Check https://developer.nvidia.com/cuda-gpus for a list of supported architectures.
-# If you list more than one architecture, CMake will build multiple versions of the CUDA code, which will increase build time and binary size.
+# Arhitectura setata pentru NVIDIA GeForce RTX 3050 Laptop (Ampere)
 if (NOT CMAKE_CUDA_ARCHITECTURES)
-    set(CMAKE_CUDA_ARCHITECTURES 75 86 89)
+    set(CMAKE_CUDA_ARCHITECTURES 86)
 endif()
 
 # Set the name of the project
 set(target_name GFXFramework)
 project(${target_name} C CXX CUDA)
-
 
 # Use C99 and C++17
 set(CMAKE_C_STANDARD 99)
@@ -24,15 +21,12 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-
 # Include helper scripts
 include(${GFXF_ROOT_DIR}/infra/utils.cmake)
 custom_set_build_type()
 
-
 # Fix to hide a bug in CMake. Hopefully able to be removed in the future.
 set(CMAKE_POLICY_DEFAULT_CMP0012 NEW)
-
 
 # Find required packages
 find_package(OpenGL REQUIRED)
@@ -45,11 +39,9 @@ if (NOT CMAKE_SYSTEM_NAME STREQUAL "Windows")
     find_package(Freetype REQUIRED)
 endif()
 
-
 find_package(CUDAToolkit REQUIRED)
 set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-
 
 # Set RPATH to avoid using LD_LIBRARY_PATH
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
@@ -59,38 +51,29 @@ else()
     set(CMAKE_INSTALL_RPATH "$ORIGIN")
 endif()
 
-
 # Gather the source files
 file(GLOB_RECURSE GFXF_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/components/*.c*
     ${CMAKE_CURRENT_LIST_DIR}/src/core/*.c*
     ${CMAKE_CURRENT_LIST_DIR}/src/utils/*.c*
-    #
     ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp
-    #
     ${CMAKE_CURRENT_LIST_DIR}/src/virtual-world-physics/*.c*
 )
 
-# physics_gpu.cpp is the OpenGL compute-shader fallback; not built since
-# CUDA is mandatory. physics_gpu_cuda.cu is the real backend.
+# Exclude fallback-ul de compute shader si include backend-ul CUDA
 list(FILTER GFXF_SOURCES EXCLUDE REGEX ".*physics_gpu\\.cpp$")
 list(APPEND GFXF_SOURCES ${CMAKE_CURRENT_LIST_DIR}/src/virtual-world-physics/physics_gpu_cuda.cu)
-
 
 # Gather the header files
 file(GLOB_RECURSE GFXF_HEADERS_PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/src/components/*.h*
     ${CMAKE_CURRENT_LIST_DIR}/src/core/*.h*
     ${CMAKE_CURRENT_LIST_DIR}/src/utils/*.h*
-    #
     ${CMAKE_CURRENT_LIST_DIR}/res/*.glsl
-    #
     ${CMAKE_CURRENT_LIST_DIR}/src/virtual-world-physics/*.h*
     ${CMAKE_CURRENT_LIST_DIR}/src/virtual-world-physics/*.cuh
-    #
     ${CMAKE_CURRENT_LIST_DIR}/src/virtual-world-physics/*.glsl
 )
-
 
 # Gather the include directories
 set(GFXF_INCLUDE_DIRS_PRIVATE
@@ -98,14 +81,12 @@ set(GFXF_INCLUDE_DIRS_PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/src
 )
 
-
 # Add the executable
 custom_add_executable(${target_name}
     ${GFXF_SOURCES}
     ${GFXF_SOURCES_HIDDEN}
     ${GFXF_HEADERS_PRIVATE}
 )
-
 
 # Detect architecture
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -122,8 +103,7 @@ elseif (CMAKE_SIZEOF_VOID_P EQUAL 4)
     endif()
 endif()
 
-
-# Set library suffic
+# Set library suffix
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     set(__cmake_shared_suffix dll)
     set(__cmake_import_suffix lib)
@@ -135,13 +115,11 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(__cmake_import_suffix dylib)
 endif()
 
-
 # Link third-party libraries
 target_link_libraries(${target_name} PRIVATE
     ${OPENGL_LIBRARIES}
+    CUDA::cudart
 )
-
-target_link_libraries(${target_name} PRIVATE CUDA::cudart)
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     target_link_libraries(${target_name} PRIVATE
@@ -160,17 +138,14 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
         freetype
     )
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    # Fix linking on 10.14+. See https://stackoverflow.com/questions/54068035
     target_link_directories(${target_name} PRIVATE
         /usr/local/lib
     )
-
     if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch")
         target_link_directories(${target_name} PRIVATE
-        /opt/homebrew/lib
-    )
+            /opt/homebrew/lib
+        )
     endif ()
-
     target_link_libraries(${target_name} PRIVATE
         GLEW
         glfw
@@ -191,10 +166,8 @@ else()
     )
 endif()
 
-
 # Set target properties
 target_include_directories(${target_name} PRIVATE ${GFXF_INCLUDE_DIRS_PRIVATE})
-
 
 # For Visual Studio, set the working directory and the startup project
 if (MSVC)
@@ -202,64 +175,51 @@ if (MSVC)
     set_property(TARGET ${target_name} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 endif()
 
-
 # Set source file properties
-set_source_files_properties(${GFXF_HEADERS_PRIVATE}  PROPERTIES HEADER_FILE_ONLY TRUE)
+set_source_files_properties(${GFXF_HEADERS_PRIVATE} PROPERTIES HEADER_FILE_ONLY TRUE)
 
-
-# Group files under logical folders (mainly for IDEs)
+# Group files under logical folders
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES
     ${GFXF_SOURCES}
     ${GFXF_SOURCES_HIDDEN}
     ${GFXF_HEADERS_PRIVATE}
 )
 
+# Definitii globale (include fix-urile pentru preprocesorul CCCL si macro-urile GLM)
+set(GFXF_CXX_DEFS LIBGFXC_EXPORTS GLM_FORCE_SILENT_WARNINGS _CRT_SECURE_NO_WARNINGS SOLVED $<$<CONFIG:Debug>:DEBUG>)
+target_compile_definitions(${target_name} PRIVATE 
+    ${GFXF_CXX_DEFS} 
+    GFXF_USE_CUDA
+    CCCL_IGNORE_MSVC_TRADITIONAL_PREPROCESSOR_WARNING
+)
 
-# Add definitions (specific to this project)
-# Recommended reading: so@a/24470998/5922876, so@a/11437693/5922876
-set(GFXF_CXX_DEFS       LIBGFXC_EXPORTS GLM_FORCE_SILENT_WARNINGS _CRT_SECURE_NO_WARNINGS SOLVED $<$<CONFIG:Debug>:DEBUG>)
-target_compile_definitions(${target_name} PRIVATE ${GFXF_CXX_DEFS} GFXF_USE_CUDA)
-
-
-# Add compile options (specific to this project)
-# Recommended reading: so@a/23995391/5922876
+# Optiuni de compilare
 if (MSVC)
-    set(GFXF_CXX_FLAGS  /W4 /WX-)
-    # TODO(developer): Maybe address these warnings, see discussion below.
-    set(GFXF_CXX_FLAGS  ${GFXF_CXX_FLAGS} /wd4100 /wd4458 /wd4189)
+    set(GFXF_CXX_FLAGS /W4 /WX- /wd4100 /wd4458 /wd4189 /Zc:preprocessor)
 else()
-    set(GFXF_CXX_FLAGS  -Wall -Wextra -pedantic -Wno-error)
-    # TODO(developer): Addressing these warnings might make the source code
-    # more convoluted, since they are generated by missing code that needs
-    # to be implemented. Some of the warnings are caused by dependencies.
+    set(GFXF_CXX_FLAGS -Wall -Wextra -pedantic -Wno-error)
     if (CMAKE_C_COMPILER_ID MATCHES "GNU")
-        set(GFXF_CXX_FLAGS  ${GFXF_CXX_FLAGS}   -Wno-unused-parameter -Wno-unused-variable
-                                                -Wno-unused-but-set-variable
-                                                -Wno-missing-field-initializers -Wno-sign-compare)
+        set(GFXF_CXX_FLAGS ${GFXF_CXX_FLAGS} -Wno-unused-parameter -Wno-unused-variable
+                                              -Wno-unused-but-set-variable
+                                              -Wno-missing-field-initializers -Wno-sign-compare)
     elseif (CMAKE_C_COMPILER_ID MATCHES "Clang")
-        set(GFXF_CXX_FLAGS  ${GFXF_CXX_FLAGS}   -Wno-unused-parameter -Wno-unused-variable
-                                                -Wno-missing-field-initializers -Wno-sign-compare
-                                                # Apple clang
-                                                -Wno-unknown-warning-option
-                                                # Windows clang
-                                                -Wno-microsoft-enum-value -Wno-language-extension-token)
+        set(GFXF_CXX_FLAGS ${GFXF_CXX_FLAGS} -Wno-unused-parameter -Wno-unused-variable
+                                              -Wno-missing-field-initializers -Wno-sign-compare
+                                              -Wno-unknown-warning-option
+                                              -Wno-microsoft-enum-value -Wno-language-extension-token)
     endif()
 endif()
 
-
 target_compile_options(${target_name} PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:${GFXF_CXX_FLAGS}>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/Zc:preprocessor>
 )
 
 set_target_properties(${target_name} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-
-# Post-build events. First, we get the directory where the target was
-# just built. We will then copy several files and create several symlinks
-# into the target's parent directory.
+# Post-build events
 get_target_property(__target_dir ${target_name} RUNTIME_OUTPUT_DIRECTORY)
 
-# On Windows, we copy required binary files next to the target.
 if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
     add_custom_command(TARGET ${target_name} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -268,22 +228,14 @@ if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
             "${GFXF_ROOT_DIR}/deps/prebuilt/assimp/${__cmake_arch}/assimp.dll"
             "${GFXF_ROOT_DIR}/deps/prebuilt/spdlog/${__cmake_arch}/spdlog.dll"
             "${GFXF_ROOT_DIR}/deps/prebuilt/freetype/${__cmake_arch}/freetype.dll"
-
-            # Destination directory
             "${__target_dir}"
     )
 endif()
 
-# This bit is necessary to allow building via Clang on Windows
 if (NOT MSVC)
     set(__error_sink || rem)
 endif()
 
-# We create symbolic links of several directories next to the target.
-# Note for developers: a much more elegant solution would be to use
-# `cmake -E rm` and `cmake -E create_symlink` and avoid using OS-specific
-# commands. Unfortunately, `create_symlink` will fail if the user is not
-# an administrator of the device, as it uses `mklink /D` under the hood.
 foreach (dir IN ITEMS "src" "assets")
     if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
         string(REPLACE "/" "\\" __target_dir "${__target_dir}")
@@ -301,10 +253,6 @@ foreach (dir IN ITEMS "src" "assets")
     endif()
 endforeach()
 
-# For builds that are supplied with closed-source modules,
-# we copy those modules next to the target. If you already
-# have access to the original source code, there's no need
-# for this step.
 if (NOT USE_DEV_COMPONENTS)
     add_custom_command(TARGET ${target_name} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${GFXF_ROOT_DIR}/deps/prebuilt/GFXComponents/${__cmake_arch}/GFXComponents.${__cmake_shared_suffix}" "${__target_dir}"

@@ -12,7 +12,7 @@ glm::mat4 PhysicsObject::GetModelMatrix() const {
 void PhysicsObject::UpdateBoundingVolume() {
   // TODO
 	boundingVolume.center = position;
-    boundingVolume.sizes = (scale + 0.2f) * 0.5f;
+    boundingVolume.sizes = scale * 0.5f;
 }
 
 void PhysicsObject::ApplyForce(const glm::vec3 &force) {
@@ -28,19 +28,19 @@ void PhysicsObject::ApplyImpulse(const glm::vec3 &impulse) {
 }
 
 void PhysicsObject::Integrate(float deltaTime) {
-  // TODO
     if (isStatic) return;
 
-    // 1. Actualizează viteza pe baza accelerației acumulate
     velocity += acceleration * deltaTime;
 
-    // 2. Actualizează poziția pe baza noii viteze
+    velocity *= 0.999f;
+
+    if (glm::length(velocity) < 0.01f) {
+        velocity = glm::vec3(0.0f);
+    }
     position += velocity * deltaTime;
 
-    // 3. Sincronizează bounding volume-ul cu noua poziție
     UpdateBoundingVolume();
 
-    // 4. Resetează accelerația pentru cadrul următor
     acceleration = glm::vec3(0.0f);
 }
 } // namespace physics
